@@ -25,12 +25,32 @@ def main():
     #image = cv2.imread('resources/megaman.png')
     pizza = cv2.imread('resources/pizza_bluescreen.jpg')
     sky = cv2.imread('resources/sky.jpg')
-
- 
     img = blue_screen(pizza, sky)
 
+    # fft 
+    mm = cv2.imread('resources/megaman.png',0)
+    f = np.fft.fft2(mm)
+    fshift = np.fft.fftshift(f)
+    mag_spec = 20*np.log(np.abs(fshift))
+
+    dft = cv2.dft(np.float32(mm), flags= cv2.DFT_COMPLEX_OUTPUT)
+    dftshift = np.fft.fftshift(dft)
+    magnitude_spectrum = 20*np.log(cv2.magnitude(dftshift[:,:,0],dftshift[:,:,1]))
+
+
+
+    plt.subplot(221), plt.imshow(mm, cmap='grey')
+    plt.title('Input img')
+    plt.subplot(222), plt.imshow(mag_spec, cmap='grey')
+    plt.title('Magnitude Spectrum')
+    plt.subplot(223), plt.imshow(mm, cmap='grey')
+    plt.title('Input img')
+    plt.subplot(224), plt.imshow(magnitude_spectrum, cmap='grey')
+    plt.title('Magnitude Spectrum')
+
     window = 'Test'
-    cv2.imshow(window, img)
+    #cv2.imshow(window, mag_spec)
+    plt.show()
 
     cv2.waitKey(0)
 
