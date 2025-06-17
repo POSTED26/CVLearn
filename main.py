@@ -2,8 +2,10 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import importlib
+import kernel
 
-
+import os
 
 def blue_screen(im1, im2):
     lower_limit = np.array([200,0,0])
@@ -24,12 +26,23 @@ def blue_screen(im1, im2):
 def main():
     #cv2.imshow("resources/megaman.png")
     #image = cv2.imread('resources/megaman.png')
-    pizza = cv2.imread('pizza_bluescreen.jpg')
-    sky = cv2.imread('sky.jpg')
+    importlib.reload(kernel)
+    #kernel.say()
+    # weird laptop/computer issue solution
+    isLaptop = False
+    if(isLaptop):
+        pizza = cv2.imread('pizza_bluescreen.jpg')
+        sky = cv2.imread('sky.jpg')
+        mm = cv2.imread('megaman.png',0)
+    else:
+        pizza = cv2.imread('resources/pizza_bluescreen.jpg')
+        sky = cv2.imread('resources/sky.jpg')
+        mm = cv2.imread('resources/megaman.png',0)
+    
     img = blue_screen(pizza, sky)
 
     # fft 
-    mm = cv2.imread('megaman.png',0)
+    
     f = np.fft.fft2(mm)
     fshift = np.fft.fftshift(f)
     mag_spec = 20*np.log(np.abs(fshift))
@@ -43,18 +56,17 @@ def main():
     sobel_x = np.array([[-1,0,1],
                         [-2,0,2],
                         [-1,0,1]])
-    sobel_y = np.array([[-2,-2,-4,-2,-2],
-                        [-1,-1,-2,-1,-1],
-                        [0,0,0,0,0],
-                        [1,1,2,1,1],
-                        [2,2,4,2,2]])
+    
     low_pass = np.array([[1/9,1/9,1/9],
                          [1/9,1/9,1/9],
                          [1/9,1/9,1/9]])
-    mm_sobely = cv2.filter2D(mm_sobely, -1, low_pass)
+    
+    #mm_sobely = kernel.sobel_y_5(mm_sobely, True)
+
+    #mm_sobely = cv2.filter2D(mm_sobely, -1, low_pass)
     mm_lp = np.copy(mm_sobely)
     mm_sobel = cv2.filter2D(mm_sobel, -1, sobel_x)
-    mm_sobely = cv2.filter2D(mm_sobely, -1, sobel_y)
+    #mm_sobely = cv2.filter2D(mm_sobely, -1, sobel_y)
     mm_canny = np.copy(mm)
     mm_canny = cv2.Canny(mm_canny,100, 150)
     ret, binary_img = cv2.threshold(mm_sobel,50, 255,cv2.THRESH_BINARY)
