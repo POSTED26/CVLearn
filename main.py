@@ -10,6 +10,7 @@ from torchvision import datasets, transforms
 from collections import OrderedDict
 
 import kernel
+import network
 
 import os
 
@@ -27,6 +28,29 @@ def blue_screen(im1, im2):
 
     return clip_mask + sky_crop
 
+def validation(model, testloader, criterion):
+    test_loss = 0
+    accuacy = 0
+    for images, labels in testloader:
+        images.resize_(images.shape[0], 784)
+        output = model.forward(images)
+        test_loss += criterion(output, labels).item()
+
+        ps = torch.exp(output)
+        equality = (labels.data == ps.max(dim=1)[1])
+        accuacy += equality.type(torch.FloatTensor).mean()
+    return test_loss, accuacy
+
+def load_checkpoint(filepath):
+    try:
+        checkpoint = torch.load(filepath)
+    except Exception as e:
+        return None, False
+    model = network.Network(checkpoint['input_size'],
+                            checkpoint['output_size'],
+                            checkpoint['hidden_layers'])
+    model.load_state_dict(checkpoint['state_dict'])
+    return model, True
 
 
 def main():
@@ -48,34 +72,33 @@ def main():
 
     transform = transforms.Compose([transforms.ToTensor(),
                                     transforms.Normalize([0.5], [0.5])])
-    testset = datasets.MNIST('MNIST_data/', download=True, train=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=True)
+    trainset = datasets.MNIST('MNIST_data/', download=True, train=True, transform=transform)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=True)
+
+    testset = datasets.FashionMNIST('F_MNIST_data/', download=True, train=False, transform=transform)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=True)
 
     #images, labels = next(dataiter)
 
     input_size = 784
-    hidden_sizes = [128, 64]
+    hidden_sizes = [516, 256]
     output_size = 10
-
-    model = nn.Sequential(OrderedDict([
-                          ('fc1', nn.Linear(input_size, hidden_sizes[0])),
-                          ('relu1', nn.ReLU()),
-                          ('fc2', nn.Linear(hidden_sizes[0], hidden_sizes[1])),
-                          ('relu2', nn.ReLU()),
-                          ('output', nn.Linear(hidden_sizes[1], output_size)),
-                          ('softmax', nn.Softmax(dim=1))]))
-    #print(model)
+    model, isFile = load_checkpoint('checkpoint.pth')
+    if not isFile:
+        model = network.Network(input_size, output_size, hidden_sizes, drop_p = 0.5)
+        print('Did not find file')
+    criterion = nn.NLLLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    print(model)
 
     epochs = 3
     print_every = 40
     steps = 0
-
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.01)
+    running_loss = 0
+    
     
     for e in range(epochs):
-        running_loss = 0
-        for images, labels in iter(trainloader):
+        for images, labels in trainloader:
             steps += 1
             images.resize_(images.shape[0], 784)
 
@@ -88,29 +111,40 @@ def main():
             running_loss += loss.item()
             
             if(steps % print_every == 0):
-                print("Epoch: {}/{}...".format(e+1, epochs), "Loss: {:.4f}".format(running_loss/print_every))
+                model.eval()
+                with torch.no_grad():
+                    test_loss, accuracy = validation(model, testloader, criterion)
+                print("Epoch: {}/{}...".format(e+1, epochs), 
+                      "Training Loss: {:.4f}".format(running_loss/print_every),
+                      "Test Loss: {:.3f}".format(test_loss/len(testloader)),
+                      "Test Accuracy: {:.3f}".format(accuracy/len(testloader)))
                 running_loss = 0
+                model.train()
     
+    # test network
 
+    model.eval()
     images, labels = next(iter(trainloader))
-    img = images[1].view(1, 784)
+    img = images[0].view(1, 784)
     with torch.no_grad():
         logits = model.forward(img)
     
     #logits = model.forward(img)
-    ps = F.softmax(logits, dim=1)
+    ps = torch.exp(logits)
+    #ps = F.softmax(logits, dim=1)
     print(ps)
-    plt.subplot(111), plt.imshow(images[1].numpy().squeeze()) #plt.barh(np.arange(10), ps.cpu().numpy())
-    '''
-    fig, (ax1, ax2) = plt.subplots(figsize=(6,9),ncols=2)
-    ax1.imshow(images[1].numpy().squeeze())
-    ax1.axis('off')
-    ax2.barh(np.arange(10), ps)
-    ax2.set_aspect(0.1)
-    ax2.set_yticks(np.arange(10))
-    ax2.set_xlim(0, 1.1)
-'''
+    plt.subplot(111), plt.imshow(images[0].numpy().squeeze()) #plt.barh(np.arange(10), ps.cpu().numpy())
+
     #plt.subplot(231), plt.imshow(images[1].numpy().squeeze(), cmap='grey')
+
+
+    # save model
+    checkpoint = {'input_size': input_size,
+                  'output_size': output_size,
+                  'hidden_layers': [each.out_features for each in model.hidden_layers],
+                  'state_dict': model.state_dict()}
+    torch.save(checkpoint, 'checkpoint.pth')
+
 
     # fft 
     
