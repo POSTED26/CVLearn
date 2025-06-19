@@ -75,7 +75,7 @@ def main():
     trainset = datasets.MNIST('MNIST_data/', download=True, train=True, transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=True)
 
-    testset = datasets.FashionMNIST('F_MNIST_data/', download=True, train=False, transform=transform)
+    testset = datasets.MNIST('F_MNIST_data/', download=True, train=False, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=True)
 
     #images, labels = next(dataiter)
