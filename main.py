@@ -2,7 +2,13 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-import importlib
+import torch
+from torch import nn
+from torch import optim
+import torch.nn.functional as F
+from torchvision import datasets, transforms
+from collections import OrderedDict
+
 import kernel
 
 import os
@@ -26,8 +32,7 @@ def blue_screen(im1, im2):
 def main():
     #cv2.imshow("resources/megaman.png")
     #image = cv2.imread('resources/megaman.png')
-    importlib.reload(kernel)
-    #kernel.say()
+    
     # weird laptop/computer issue solution
     isLaptop = False
     if(isLaptop):
@@ -40,6 +45,72 @@ def main():
         mm = cv2.imread('resources/megaman.png',0)
     
     img = blue_screen(pizza, sky)
+
+    transform = transforms.Compose([transforms.ToTensor(),
+                                    transforms.Normalize([0.5], [0.5])])
+    testset = datasets.MNIST('MNIST_data/', download=True, train=True, transform=transform)
+    trainloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=True)
+
+    #images, labels = next(dataiter)
+
+    input_size = 784
+    hidden_sizes = [128, 64]
+    output_size = 10
+
+    model = nn.Sequential(OrderedDict([
+                          ('fc1', nn.Linear(input_size, hidden_sizes[0])),
+                          ('relu1', nn.ReLU()),
+                          ('fc2', nn.Linear(hidden_sizes[0], hidden_sizes[1])),
+                          ('relu2', nn.ReLU()),
+                          ('output', nn.Linear(hidden_sizes[1], output_size)),
+                          ('softmax', nn.Softmax(dim=1))]))
+    #print(model)
+
+    epochs = 3
+    print_every = 40
+    steps = 0
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(), lr=0.01)
+    
+    for e in range(epochs):
+        running_loss = 0
+        for images, labels in iter(trainloader):
+            steps += 1
+            images.resize_(images.shape[0], 784)
+
+            optimizer.zero_grad()
+            output = model.forward(images)
+            loss = criterion(output, labels)
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+            
+            if(steps % print_every == 0):
+                print("Epoch: {}/{}...".format(e+1, epochs), "Loss: {:.4f}".format(running_loss/print_every))
+                running_loss = 0
+    
+
+    images, labels = next(iter(trainloader))
+    img = images[1].view(1, 784)
+    with torch.no_grad():
+        logits = model.forward(img)
+    
+    #logits = model.forward(img)
+    ps = F.softmax(logits, dim=1)
+    print(ps)
+    plt.subplot(111), plt.imshow(images[1].numpy().squeeze()) #plt.barh(np.arange(10), ps.cpu().numpy())
+    '''
+    fig, (ax1, ax2) = plt.subplots(figsize=(6,9),ncols=2)
+    ax1.imshow(images[1].numpy().squeeze())
+    ax1.axis('off')
+    ax2.barh(np.arange(10), ps)
+    ax2.set_aspect(0.1)
+    ax2.set_yticks(np.arange(10))
+    ax2.set_xlim(0, 1.1)
+'''
+    #plt.subplot(231), plt.imshow(images[1].numpy().squeeze(), cmap='grey')
 
     # fft 
     
@@ -61,7 +132,7 @@ def main():
                          [1/9,1/9,1/9],
                          [1/9,1/9,1/9]])
     
-    #mm_sobely = kernel.sobel_y_5(mm_sobely, True)
+    mm_sobely = kernel.sobel_y_5(mm_sobely, True)
 
     #mm_sobely = cv2.filter2D(mm_sobely, -1, low_pass)
     mm_lp = np.copy(mm_sobely)
@@ -81,8 +152,8 @@ def main():
     plt.subplot(224), plt.imshow(magnitude_spectrum, cmap='grey')
     plt.title('Magnitude Spectrum')
     '''
-
-    plt.subplot(231) , plt.imshow(mm, cmap='gray')
+    '''
+    #plt.subplot(231) , plt.imshow(mm, cmap='gray')
     plt.title('Base Grey')
     plt.subplot(232), plt.imshow(mm_sobel, cmap='grey')
     plt.title('Sobel X')
@@ -94,10 +165,11 @@ def main():
     plt.title('Sobel Y')
     plt.subplot(236), plt.imshow(binary_imgy, cmap='grey')
     plt.title('Thresh Y')
-
+    '''
     window = 'Test'
     #cv2.imshow(window, mag_spec)
-    cv2.imshow(window, mm_canny)
+    #cv2.imshow(window, cv2.resize(img.numpy(), (400,400)))
+    
     plt.show()
 
     cv2.waitKey(0)
