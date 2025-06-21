@@ -11,6 +11,7 @@ from collections import OrderedDict
 
 import kernel
 import network
+import net
 
 import os
 
@@ -28,10 +29,12 @@ def blue_screen(im1, im2):
 
     return clip_mask + sky_crop
 
-def validation(model, testloader, criterion):
+def validation(model, testloader, criterion, device):
     test_loss = 0
     accuacy = 0
     for images, labels in testloader:
+        images = images.to(device)
+        labels = labels.to(device)
         images.resize_(images.shape[0], 784)
         output = model.forward(images)
         test_loss += criterion(output, labels).item()
@@ -53,12 +56,40 @@ def load_checkpoint(filepath):
     return model, True
 
 
+def check_accuracy_before(testloader, net, device):
+    # Calculate accuracy before training
+    correct = 0
+    total = 0
+
+    # Iterate through test dataset
+    for images, labels in testloader:
+        images = images.to(device)
+        labels = labels.to(device)
+        # forward pass to get outputs
+        # the outputs are a series of class scores
+        outputs = net.forward(images)
+
+        # get the predicted class from the maximum value in the output-list of class scores
+        _, predicted = torch.max(outputs.data, 1)
+
+        # count up total number of correct labels
+        # for which the predicted and true labels are equal
+        total += labels.size(0)
+        correct += (predicted == labels).sum()
+
+    # calculate the accuracy
+    # to convert `correct` from a Tensor into a scalar, use .item()
+    accuracy = 100.0 * correct.item() / total
+
+    # print it out!
+    print('Accuracy before training: ', accuracy)
+
 def main():
     #cv2.imshow("resources/megaman.png")
     #image = cv2.imread('resources/megaman.png')
     
     # weird laptop/computer issue solution
-    isLaptop = False
+    isLaptop = True
     if(isLaptop):
         pizza = cv2.imread('pizza_bluescreen.jpg')
         sky = cv2.imread('sky.jpg')
@@ -70,16 +101,30 @@ def main():
     
     img = blue_screen(pizza, sky)
 
+    # Check if CUDA is available
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+    else:
+        device = torch.device("cpu")
+        print("CUDA not available, using CPU.")
+
+    # till I figure out cuda issues with test net
+    device = "cpu"
+
+    batch_size = 20
     transform = transforms.Compose([transforms.ToTensor(),
                                     transforms.Normalize([0.5], [0.5])])
-    trainset = datasets.MNIST('MNIST_data/', download=True, train=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=True)
+    trainset = datasets.FashionMNIST('MNIST_data/', download=True, train=True, transform=transform)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
 
-    testset = datasets.MNIST('F_MNIST_data/', download=True, train=False, transform=transform)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=True)
+    testset = datasets.FashionMNIST('F_MNIST_data/', download=True, train=False, transform=transform)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=True)
 
+    classes = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 
+           'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
     #images, labels = next(dataiter)
-
+    '''
     input_size = 784
     hidden_sizes = [516, 256]
     output_size = 10
@@ -87,63 +132,33 @@ def main():
     if not isFile:
         model = network.Network(input_size, output_size, hidden_sizes, drop_p = 0.5)
         print('Did not find file')
-    criterion = nn.NLLLoss()
+    '''
+    model = net.Net()
+    model = model.to(device=device)
+
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     print(model)
 
+
+    
+    check_accuracy_before(testloader, model, device)
+    
+    # Training network
     epochs = 3
-    print_every = 40
-    steps = 0
-    running_loss = 0
+    loss_over_time = net.train_net(epochs, trainloader, optimizer, criterion, model, device)
     
-    
-    for e in range(epochs):
-        for images, labels in trainloader:
-            steps += 1
-            images.resize_(images.shape[0], 784)
-
-            optimizer.zero_grad()
-            output = model.forward(images)
-            loss = criterion(output, labels)
-            loss.backward()
-            optimizer.step()
-
-            running_loss += loss.item()
-            
-            if(steps % print_every == 0):
-                model.eval()
-                with torch.no_grad():
-                    test_loss, accuracy = validation(model, testloader, criterion)
-                print("Epoch: {}/{}...".format(e+1, epochs), 
-                      "Training Loss: {:.4f}".format(running_loss/print_every),
-                      "Test Loss: {:.3f}".format(test_loss/len(testloader)),
-                      "Test Accuracy: {:.3f}".format(accuracy/len(testloader)))
-                running_loss = 0
-                model.train()
     
     # test network
+    net.test_net(model,testloader,criterion,batch_size, classes, device)
 
-    model.eval()
-    images, labels = next(iter(trainloader))
-    img = images[0].view(1, 784)
-    with torch.no_grad():
-        logits = model.forward(img)
-    
-    #logits = model.forward(img)
-    ps = torch.exp(logits)
-    #ps = F.softmax(logits, dim=1)
-    print(ps)
-    plt.subplot(111), plt.imshow(images[0].numpy().squeeze()) #plt.barh(np.arange(10), ps.cpu().numpy())
-
-    #plt.subplot(231), plt.imshow(images[1].numpy().squeeze(), cmap='grey')
 
 
     # save model
-    checkpoint = {'input_size': input_size,
-                  'output_size': output_size,
-                  'hidden_layers': [each.out_features for each in model.hidden_layers],
-                  'state_dict': model.state_dict()}
-    torch.save(checkpoint, 'checkpoint.pth')
+
+    model_dir = "saved models/"
+    model_name = "FirstCNN.pt"
+    torch.save(model.state_dict(), model_name)
 
 
     # fft 
