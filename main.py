@@ -137,17 +137,18 @@ def main():
     check_accuracy_before(testloader, model, device)
     
     # Training network
-    epochs = 3
-    loss_over_time = net.train_net(epochs, trainloader, optimizer, criterion, model, device)
-    print(loss_over_time)
-    # test network
-    net.test_net(model,testloader,criterion,batch_size, classes, device)
+    if(False):
+        epochs = 3
+        loss_over_time = net.train_net(epochs, trainloader, optimizer, criterion, model, device)
+        print(loss_over_time)
+        # test network
+        net.test_net(model,testloader,criterion,batch_size, classes, device)
 
-    # save model
+        # save model
 
-    model_dir = "saved models/"
-    model_name = "FirstCNN.pt"
-    torch.save(model.state_dict(), model_name)
+        model_dir = "saved models/"
+        model_name = "FirstCNN.pt"
+        torch.save(model.state_dict(), model_name)
 
 
     # fft 
@@ -182,6 +183,27 @@ def main():
     ret, binary_imgy = cv2.threshold(mm_sobely,100,255, cv2.THRESH_BINARY)
  
     window = 'Test'
+    if False:
+        cap = cv2.VideoCapture(0);
+        if not cap.isOpened():
+            print('No Video')
+            exit()
+        while True:
+            ret, frame = cap.read()
+
+            if not ret:
+                print('Could not read from video')
+                break;
+
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            f_canny = frame.copy()
+            f_canny = cv2.Canny(f_canny, 100, 150)
+            cv2.imshow('video', f_canny)
+            cv2.waitKey(1)
+    
+        
+        cap.release()
+
     #cv2.imshow(window, mag_spec)
     #cv2.imshow(window, cv2.resize(img.numpy(), (400,400)))
     
