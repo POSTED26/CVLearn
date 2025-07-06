@@ -98,6 +98,7 @@ def train_net(n_epochs, trainloader, optimizer, criterion, net, device):
 def test_net(net, testloader, criterion, batch_size, classes, device):
     # initialize tensor and lists to monitor test loss and accuracy
     test_loss = torch.zeros(1)
+    test_loss = test_loss.to(device)
     class_correct = list(0. for i in range(10))
     class_total = list(0. for i in range(10))
 
@@ -116,10 +117,11 @@ def test_net(net, testloader, criterion, batch_size, classes, device):
         
         # calculate the loss
         loss = criterion(outputs, labels)
+        #loss = loss.to(device)
 
         # update average test loss 
         
-        test_loss = test_loss + ((torch.ones(1) / (batch_i + 1)) * (loss.data - test_loss))
+        test_loss = test_loss + ((torch.ones(1, device=device) / (batch_i + 1)) * (loss.data - test_loss))
 
         # get the predicted class from the maximum value in the output-list of class scores
         _, predicted = torch.max(outputs.data, 1)
@@ -134,7 +136,7 @@ def test_net(net, testloader, criterion, batch_size, classes, device):
             label = labels.data[i]
             class_correct[label] += correct[i].item()
             class_total[label] += 1
-
+    test_loss = test_loss.cpu()
     print('Test Loss: {:.6f}\n'.format(test_loss.numpy()[0]))
 
     for i in range(10):

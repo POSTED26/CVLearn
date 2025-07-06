@@ -101,6 +101,8 @@ def main():
     
     img = blue_screen(pizza, sky)
 
+
+
     # Check if CUDA is available
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -110,7 +112,7 @@ def main():
         print("CUDA not available, using CPU.")
 
     # till I figure out cuda issues with test net
-    device = "cpu"
+    device = "cuda"
 
     batch_size = 20
     transform = transforms.Compose([transforms.ToTensor(),
@@ -124,15 +126,7 @@ def main():
     classes = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 
            'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
     #images, labels = next(dataiter)
-    '''
-    input_size = 784
-    hidden_sizes = [516, 256]
-    output_size = 10
-    model, isFile = load_checkpoint('checkpoint.pth')
-    if not isFile:
-        model = network.Network(input_size, output_size, hidden_sizes, drop_p = 0.5)
-        print('Did not find file')
-    '''
+
     model = net.Net()
     model = model.to(device=device)
 
@@ -140,19 +134,14 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     print(model)
 
-
-    
     check_accuracy_before(testloader, model, device)
     
     # Training network
     epochs = 3
     loss_over_time = net.train_net(epochs, trainloader, optimizer, criterion, model, device)
-    
-    
+    print(loss_over_time)
     # test network
     net.test_net(model,testloader,criterion,batch_size, classes, device)
-
-
 
     # save model
 
@@ -191,30 +180,7 @@ def main():
     mm_canny = cv2.Canny(mm_canny,100, 150)
     ret, binary_img = cv2.threshold(mm_sobel,50, 255,cv2.THRESH_BINARY)
     ret, binary_imgy = cv2.threshold(mm_sobely,100,255, cv2.THRESH_BINARY)
-    '''
-    plt.subplot(221), plt.imshow(mm, cmap='grey')
-    plt.title('Input img')
-    plt.subplot(222), plt.imshow(mag_spec, cmap='grey')
-    plt.title('Magnitude Spectrum')
-    plt.subplot(223), plt.imshow(mm, cmap='grey')
-    plt.title('Input img')
-    plt.subplot(224), plt.imshow(magnitude_spectrum, cmap='grey')
-    plt.title('Magnitude Spectrum')
-    '''
-    '''
-    #plt.subplot(231) , plt.imshow(mm, cmap='gray')
-    plt.title('Base Grey')
-    plt.subplot(232), plt.imshow(mm_sobel, cmap='grey')
-    plt.title('Sobel X')
-    plt.subplot(233), plt.imshow(binary_img, cmap='grey')
-    plt.title('Thresh')
-    plt.subplot(234) , plt.imshow(mm_lp, cmap='gray')
-    plt.title('Base Grey')
-    plt.subplot(235), plt.imshow(mm_sobely, cmap='grey')
-    plt.title('Sobel Y')
-    plt.subplot(236), plt.imshow(binary_imgy, cmap='grey')
-    plt.title('Thresh Y')
-    '''
+ 
     window = 'Test'
     #cv2.imshow(window, mag_spec)
     #cv2.imshow(window, cv2.resize(img.numpy(), (400,400)))
