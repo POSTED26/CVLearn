@@ -27,7 +27,7 @@ class Net(nn.Module):
 
         # 20 outputs * the 5*5 filtered/pooled map size
         self.fc1 = nn.Linear(20*5*5, 50)
-
+        
         # dropout with p=0.4
         self.fc1_drop = nn.Dropout(p=0.4)
 
@@ -67,6 +67,9 @@ def train_net(n_epochs, trainloader, optimizer, criterion, net, device):
             labels = labels.to(device)
             # zero the parameter (weight) gradients
             optimizer.zero_grad()
+
+
+
 
             # forward pass to get outputs
             outputs = net.forward(inputs)

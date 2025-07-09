@@ -89,7 +89,7 @@ def main():
     #image = cv2.imread('resources/megaman.png')
     
     # weird laptop/computer issue solution
-    isLaptop = True
+    isLaptop = False
     if(isLaptop):
         pizza = cv2.imread('pizza_bluescreen.jpg')
         sky = cv2.imread('sky.jpg')
@@ -136,8 +136,9 @@ def main():
     model = net.Net()
     model = model.to(device=device)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss() 
     optimizer = optim.Adam(model.parameters(), lr=0.001)
+    
     print(model)
 
 
@@ -186,6 +187,7 @@ def main():
     #mm_sobely = cv2.filter2D(mm_sobely, -1, low_pass)
     mm_lp = np.copy(mm_sobely)
     mm_sobel = cv2.filter2D(mm_sobel, -1, sobel_x)
+    
     #mm_sobely = cv2.filter2D(mm_sobely, -1, sobel_y)
     mm_canny = np.copy(mm)
     mm_canny = cv2.Canny(mm_canny,100, 150)
