@@ -1,5 +1,11 @@
 Learning Computer Vision using openCV and python
 
+Things I have done:
+- learned about kernels for extracting feature sets
+- Created a basic CNN with multiple convolution layers, pooling layers and linear layers with drop out.
+- Trained my net on MINST data.
+- Tracking accuracy on my net against the test dataset.
+
 goals:
 - get comformatable with openCV
 - get better at python

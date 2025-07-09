@@ -138,7 +138,7 @@ def main():
     check_accuracy_before(testloader, model, device)
     
     # Training network
-    if(False):
+    if(True):
         epochs = 3
         loss_over_time = net.train_net(epochs, trainloader, optimizer, criterion, model, device)
         print(loss_over_time)
